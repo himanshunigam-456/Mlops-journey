@@ -1,0 +1,42 @@
+[project]
+name = "mlops-journey"
+version = "0.0.1"
+description = "Himanshu's 6-month MLOps + Agentic AI portfolio journey."
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.uv.workspace]
+# Project members. uv ignores entries pointing to dirs that don't exist yet
+# (the later projects get added as we build them).
+members = [
+  "project-0-warmup",
+  "project-1-credit-risk-pipeline",
+  "project-2-sre-copilot",
+  "project-3-medical-rag",
+  "project-4-ml-platform-k8s",
+  "project-5-pricing-agent",
+]
+exclude = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/F = pycodestyle errors + pyflakes
+# I    = isort (import sorting)
+# UP   = pyupgrade (modernize syntax)
+# B    = bugbear (likely-bug patterns)
+# W    = pycodestyle warnings
+select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = [
+  "project-0-warmup/tests",
+  "project-1-credit-risk-pipeline/tests",
+  "project-2-sre-copilot/tests",
+  "project-3-medical-rag/tests",
+  "project-4-ml-platform-k8s/tests",
+  "project-5-pricing-agent/tests",
+]
+addopts = "-ra --strict-markers"
