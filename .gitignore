@@ -3,3 +3,6 @@ __pycache__/
 
 # Local infra data (mounted volumes — not committed)
 infra/data/
+
+# Local secrets (use infra/.env.example as template)
+infra/.env

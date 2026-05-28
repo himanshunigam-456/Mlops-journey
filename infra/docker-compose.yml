@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     container_name: mlops-postgres
     environment:
-      POSTGRES_USER: mlops
-      POSTGRES_PASSWORD: REDACTED-OLD-DEFAULT
-      POSTGRES_DB: mlflow
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mlops -d mlflow"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,8 +21,8 @@ services:
     container_name: mlops-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: REDACTED-OLD-DEFAULT
-      MINIO_ROOT_PASSWORD: REDACTED-OLD-DEFAULT
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"   # S3 API
       - "9001:9001"   # console UI
@@ -39,9 +39,10 @@ services:
     image: minio/mc:RELEASE.2024-08-17T11-33-50Z
     depends_on:
       minio: { condition: service_healthy }
+    environment:
+      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
     entrypoint: >
       sh -c "
-      mc alias set local http://minio:9000 REDACTED-OLD-DEFAULT REDACTED-OLD-DEFAULT &&
       mc mb -p local/mlflow &&
       mc mb -p local/datasets &&
       echo 'buckets ready'
@@ -68,11 +69,10 @@ services:
       minio-init: { condition: service_completed_successfully }
     environment:
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
-      AWS_ACCESS_KEY_ID: REDACTED-OLD-DEFAULT
-      AWS_SECRET_ACCESS_KEY: REDACTED-OLD-DEFAULT
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     ports:
       - "5000:5000"
-    # entrypoint retries pip install (handles transient DNS issues) then exec mlflow
     volumes:
       - ./mlflow-entrypoint.sh:/mlflow-entrypoint.sh:ro
     entrypoint: ["/mlflow-entrypoint.sh"]
@@ -80,7 +80,7 @@ services:
       mlflow server
       --host 0.0.0.0
       --port 5000
-      --backend-store-uri postgresql://REDACTED:REDACTED@postgres:5432/mlflow
+      --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       --artifacts-destination s3://mlflow/
       --serve-artifacts
     # MLflow image has no curl — use python to hit /health instead

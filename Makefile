@@ -23,5 +23,7 @@ ps:  ## Show running containers in the stack
 
 clean:  ## Stop stack AND remove data volumes (DESTRUCTIVE)
 	cd infra && docker compose down -v
-	rm -rf infra/data/
+	# Bind-mounted data dirs are root-owned (created by containerized
+	# Postgres/MinIO). Use Docker (also root) to remove them instead of sudo.
+	docker run --rm -v $$(pwd)/infra/data:/data alpine sh -c "rm -rf /data/* /data/.[!.]*" 2>/dev/null || true
 	@echo "Local data wiped. Stack is at fresh-install state."
