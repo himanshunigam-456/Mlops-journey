@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello
+  labels: { app: hello }
+spec:
+  restartPolicy: Never
+  containers:
+    - name: hello
+      image: busybox:1.36
+      command: ["sh", "-c", "echo 'k3d-mlops is alive at' $(date) && sleep 2"]
