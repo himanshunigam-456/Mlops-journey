@@ -16,3 +16,10 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  # Scan for accidentally committed secrets (API keys, passwords, tokens).
+  # Catches what detect-private-key misses. Battle-tested by GitLab + others.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
