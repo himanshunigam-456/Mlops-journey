@@ -21,6 +21,21 @@ logs:  ## Tail logs from docker-compose stack
 ps:  ## Show running containers in the stack
 	cd infra && docker compose ps
 
+demo:  ## End-to-end: start stack, train baseline model, log to MLflow
+	@$(MAKE) up
+	@echo "── Waiting for MLflow ──"
+	@for i in 1 2 3 4 5 6 7 8 9 10; do \
+		curl -sf http://localhost:5000/health > /dev/null && break || sleep 5; \
+	done
+	@echo "── Running baseline notebook ──"
+	.venv/bin/jupyter nbconvert --to notebook --execute \
+		project-0-warmup/notebooks/credit_baseline.ipynb \
+		--output credit_baseline.ipynb
+	@echo ""
+	@echo "✅ Done. Browse:"
+	@echo "   MLflow UI: http://localhost:5000  (experiment 'credit-baseline')"
+	@echo "   MinIO UI:  http://localhost:9001  (bucket 'mlflow/')"
+
 clean:  ## Stop stack AND remove data volumes (DESTRUCTIVE)
 	cd infra && docker compose down -v
 	# Bind-mounted data dirs are root-owned (created by containerized

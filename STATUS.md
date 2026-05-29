@@ -4,31 +4,31 @@ Single source of truth for "where am I right now?" Updated at the end of every s
 
 ## Current
 
-- **Week:** 1 of 26
-- **Day:** Day 4 / 5 — in progress
-- **Project:** project-0-warmup (Week 1 foundations)
+- **Week:** 1 of 26 — ✅ COMPLETE
+- **Project:** project-0-warmup — ✅ shipped
 - **Infrastructure:** 18 / 18 verify checks passing
+- **First MLflow run:** `credit-baseline / warmup-randomforest` (acc 0.752, auc 0.788)
 - **Blockers:** none
-- **Last commit:** `git log -1 --oneline`
 
-## Week 1 milestones (Mon–Fri)
+## Week 1 milestones (all green)
 
 - [x] Day 1 — Toolchain installed (uv, direnv, Ollama with GPU verified)
 - [x] Day 2 — k3d-mlops cluster created + smoke-tested
 - [x] Day 3 — Docker Compose stack live (MLflow + MinIO + Postgres + Redis)
-- [x] Day 4 — Monorepo skeleton + Makefile + pre-commit + README + GitHub push
-- [ ] Day 5 — sklearn baseline notebook + tested module + MLflow run logged
+- [x] Day 4 — Monorepo skeleton + pre-commit + README + GitHub push
+- [x] Day 5 — sklearn baseline notebook + tested module + MLflow run logged
 
-## Up next
+## Up next — Week 2 begins Project 1
 
-**Day 5:** sklearn baseline. Build a TDD'd `train_baseline()` function in
-`project-0-warmup/src/credit_baseline/pipeline.py`, then a Jupyter notebook
-that loads the German Credit dataset, calls it, and logs the run to MLflow.
+**Project 1: Self-Healing Credit-Risk Pipeline** (Fintech, weeks 2-6)
 
-End-of-Friday gate: `make demo` runs end-to-end and an experiment shows up
-in the MLflow UI with the model stored in MinIO.
+The warmup module + notebook becomes the *seed* — Project 1 wraps it with
+DVC for data versioning, switches to XGBoost, adds Evidently AI for drift
+detection, GitHub Actions retraining workflow, FastAPI serving with canary
+deployment, and Prometheus/Grafana monitoring.
 
-After that: **Week 2 starts Project 1** (Self-Healing Credit-Risk Pipeline).
+Next session command: ask Claude to "plan Project 1" — invokes writing-plans
+skill for a 5-week implementation plan, then we execute task-by-task.
 
 ## Memory
 
