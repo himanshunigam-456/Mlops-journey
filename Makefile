@@ -10,7 +10,13 @@ up:  ## Start docker-compose stack (postgres, minio, redis, mlflow)
 	cd infra && docker compose up -d
 	@echo ""
 	@echo "  MLflow UI: http://localhost:5000"
-	@echo "  MinIO UI:  http://localhost:9001  (REDACTED-OLD-DEFAULT / REDACTED-OLD-DEFAULT)"
+	@if [ -f infra/.env ]; then \
+		MINIO_USER=$$(grep '^MINIO_ROOT_USER=' infra/.env | cut -d= -f2); \
+		MINIO_PASS=$$(grep '^MINIO_ROOT_PASSWORD=' infra/.env | cut -d= -f2); \
+		echo "  MinIO UI:  http://localhost:9001  ($$MINIO_USER / $$MINIO_PASS)"; \
+	else \
+		echo "  MinIO UI:  http://localhost:9001  (see infra/.env for credentials)"; \
+	fi
 
 down:  ## Stop docker-compose stack
 	cd infra && docker compose down
