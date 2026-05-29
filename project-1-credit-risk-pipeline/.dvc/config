@@ -1,0 +1,5 @@
+[core]
+    remote = minio
+['remote "minio"']
+    url = s3://datasets/project-1
+    endpointurl = http://localhost:9000
