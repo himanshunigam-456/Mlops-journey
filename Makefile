@@ -42,6 +42,20 @@ demo:  ## End-to-end: start stack, train baseline model, log to MLflow
 	@echo "   MLflow UI: http://localhost:5000  (experiment 'credit-baseline')"
 	@echo "   MinIO UI:  http://localhost:9001  (bucket 'mlflow/')"
 
+# ── Project 1 — Credit Risk Pipeline ──
+
+p1-data:  ## Pull project-1 raw data from MinIO (DVC)
+	cd project-1-credit-risk-pipeline && ../.venv/bin/dvc pull
+
+p1-train:  ## Run the 3-trial hyperparameter sweep, log all to MLflow
+	cd project-1-credit-risk-pipeline && ../.venv/bin/python -m credit_risk.cli train
+
+p1-register:  ## Promote the best run to Model Registry @ Staging
+	cd project-1-credit-risk-pipeline && ../.venv/bin/python -m credit_risk.cli register
+
+p1-test:  ## Run all project-1 tests
+	.venv/bin/pytest project-1-credit-risk-pipeline -v
+
 clean:  ## Stop stack AND remove data volumes (DESTRUCTIVE)
 	cd infra && docker compose down -v
 	# Bind-mounted data dirs are root-owned (created by containerized
