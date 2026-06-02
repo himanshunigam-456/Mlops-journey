@@ -61,8 +61,8 @@ via Helm — the "build your own SageMaker" pattern.
 
 | # | Project | Domain | Status |
 |---|---------|--------|--------|
-| 0 | Warmup — sklearn baseline + MLflow vertical slice | — | 🟡 Week 1 |
-| 1 | Self-Healing Credit-Risk Pipeline | Fintech | 📋 Planned |
+| 0 | Warmup — sklearn baseline + MLflow vertical slice | — | ✅ Complete |
+| 1 | Self-Healing Credit-Risk Pipeline | Fintech | ✅ Phase 1 |
 | 2 | Agentic SRE Co-Pilot (Autonomous Incident Investigator) | DevOps Tooling | 📋 Planned |
 | 3 | Medical-Literature RAG with Continuous Evaluation | Healthcare | 📋 Planned |
 | 4 | Mini ML Platform on Kubernetes ★ | Platform Engineering | 📋 Planned |
@@ -128,4 +128,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-*Currently executing Week 1 of 26 — see [`STATUS.md`](STATUS.md) for live progress.*
+*Currently executing Week 2 of 26 — Project 1 Phase 1 complete. See [`STATUS.md`](STATUS.md) for live progress.*
