@@ -34,6 +34,7 @@ class TrainingResult:
     n_train: int
     n_test: int
     params: dict[str, Any] = field(default_factory=dict)
+    feature_names: list[str] = field(default_factory=list)
 
 
 def train_xgboost(
@@ -73,4 +74,5 @@ def train_xgboost(
         n_train=len(split.X_train),
         n_test=len(split.X_test),
         params=params,
+        feature_names=list(split.X_train.columns),
     )

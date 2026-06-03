@@ -14,6 +14,7 @@ from typing import Annotated
 import mlflow
 import mlflow.sklearn
 import typer
+from mlflow.models import infer_signature
 
 from credit_risk.data_loader import load_german_credit
 from credit_risk.features import train_test_split_stratified
@@ -66,7 +67,13 @@ def train(
                     "n_test": result.n_test,
                 }
             )
-            mlflow.sklearn.log_model(result.model, artifact_path="model")
+            signature = infer_signature(split.X_train, result.model.predict(split.X_train))
+            mlflow.sklearn.log_model(
+                result.model,
+                artifact_path="model",
+                signature=signature,
+                input_example=split.X_train.head(2),
+            )
             typer.echo(
                 f"  trial-{i}: roc_auc={result.roc_auc:.3f}  "
                 f"accuracy={result.accuracy:.3f}  f1={result.f1:.3f}"

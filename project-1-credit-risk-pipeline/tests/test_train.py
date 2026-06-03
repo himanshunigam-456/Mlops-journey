@@ -55,3 +55,11 @@ def test_train_records_params(synthetic_split):
     result = train_xgboost(synthetic_split, n_estimators=20, max_depth=3, random_state=0)
     assert result.params["n_estimators"] == 20
     assert result.params["max_depth"] == 3
+
+
+def test_train_result_exposes_feature_names(synthetic_split):
+    """Phase 2 needs feature_names to derive the serving signature."""
+    result = train_xgboost(synthetic_split, n_estimators=20, max_depth=3, random_state=0)
+    assert result.feature_names is not None
+    assert len(result.feature_names) == synthetic_split.X_train.shape[1]
+    assert all(isinstance(c, str) for c in result.feature_names)
