@@ -50,6 +50,20 @@ flowchart LR
 
 The pattern mirrors production: managed-service infra (MLflow, MinIO, Postgres) runs as docker-compose; workloads run as containers. The trained model artifact lives in object storage and is referenced by Registry alias — version bumps don't require code changes.
 
+### Live demo — batch loan decisioning
+
+![BlueLeaf Bank — Loan Decision Service](docs/screenshots/streamlit-demo.png)
+
+A Streamlit UI on top of the same model: upload an Indian-bank-formatted customer CSV (2,000 sample rows included), get back per-customer decisions in three bands — **APPROVE / REVIEW / REJECT** — with feature-importance-based reason codes and an audit trail (model version, schema map version, scored-at timestamp).
+
+```bash
+make p2-streamlit          # opens http://localhost:8501
+make p2-batch              # CLI: writes loan_decisions.xlsx
+make p2-demo-data          # regenerates the 2,000-row synthetic CSV
+```
+
+The demo schema mimics what an Indian retail bank's loan-application pipeline emits (PAN, INR amounts, employment categories, Indian addresses). All data is synthetic. The model itself is trained on the open UCI German Credit dataset for reproducibility; a YAML schema map translates between the bank's schema and the model's training schema. Onboarding a new bank's data means editing the YAML, not the code.
+
 ---
 
 ## Local stack

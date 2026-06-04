@@ -91,6 +91,17 @@ p2-test:  ## Run only the Phase 2 (serving) tests
 	                 project-1-credit-risk-pipeline/tests/test_serving_app.py \
 	                 project-1-credit-risk-pipeline/tests/test_serving_smoke.py -v
 
+# ── Project 1 — Batch scoring + demo UI ──
+
+p2-demo-data:  ## Regenerate the 2000-row synthetic Indian-bank customer CSV
+	.venv/bin/python project-1-credit-risk-pipeline/scripts/generate_synthetic_customers.py
+
+p2-batch:  ## Run batch scoring on the sample CSV → loan_decisions.xlsx
+	.venv/bin/python project-1-credit-risk-pipeline/scripts/batch_predict.py
+
+p2-streamlit:  ## Launch the BlueLeaf Bank demo UI on http://localhost:8501
+	.venv/bin/streamlit run project-1-credit-risk-pipeline/serving/streamlit_app.py
+
 clean:  ## Stop stack AND remove data volumes (DESTRUCTIVE)
 	cd infra && docker compose down -v
 	# Bind-mounted data dirs are root-owned (created by containerized

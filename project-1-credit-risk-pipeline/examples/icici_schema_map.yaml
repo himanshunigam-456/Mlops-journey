@@ -1,0 +1,103 @@
+# Schema map — Indian retail bank (ICICI-style) → credit-risk model features
+#
+# This file is the contract between a bank's loan-application pipeline and
+# our model. Edit it (not the code) to onboard a new bank's data shape.
+#
+# The model was trained on the UCI German Credit dataset (categorical codes
+# like "A11", "A40"). This map translates Indian-bank-format fields into
+# those codes, then features.py:encode_features() one-hot encodes the result.
+
+# ── Direct numeric mappings ─────────────────────────────────────────────
+direct:
+  duration:           loan_duration_months
+  credit_amount:      loan_amount_inr
+  age:                age
+  num_dependents:     dependents
+  existing_credits:   existing_loans
+  residence_since:    years_in_current_job   # proxy: stability metric
+
+# ── Categorical translations ────────────────────────────────────────────
+categorical:
+  # Loan purpose → German Credit purpose codes (A40-A410)
+  purpose:
+    Home Loan:        A42      # furniture/equipment (closest analogue)
+    Car Loan:         A40      # car (new)
+    Personal Loan:    A410     # others
+    Education Loan:   A46      # education
+    Business Loan:    A49      # business
+    Marriage Loan:    A410     # others
+
+  # Housing → German codes (A151-A153)
+  housing:
+    Own:              A152
+    Rent:             A151
+    Family:           A153
+
+# ── Banded categoricals (numeric → bucket) ──────────────────────────────
+banded:
+  # Employment duration (A71-A75) — buckets of years_in_current_job
+  employment:
+    source: years_in_current_job
+    bands:
+      - { lt: 1,   code: A71 }   # unemployed / <1yr
+      - { lt: 4,   code: A72 }   # <1-4
+      - { lt: 7,   code: A73 }   # 4-7
+      - { lt: 999, code: A74 }   # 7+
+    employment_type_overrides:    # Homemaker / Retired override → A71
+      Homemaker: A71
+      Retired:   A71
+
+  # Savings status (A61-A65) — bucket monthly income proxy
+  savings_status:
+    source: monthly_income_inr
+    bands:
+      - { lt: 25_000,    code: A61 }   # <₹25K   — low buffer
+      - { lt: 50_000,    code: A62 }   # ₹25K-50K
+      - { lt: 100_000,   code: A63 }   # ₹50K-1L
+      - { lt: 250_000,   code: A64 }   # ₹1L-2.5L
+      - { lt: 999_999_999, code: A65 } # ₹2.5L+ — strong savings
+
+  # Checking status (A11-A14) — bucket existing_emi vs income ratio
+  checking_status:
+    source: emi_to_income_ratio    # derived field, see derived section
+    bands:
+      - { lt: 0.10, code: A14 }    # very healthy
+      - { lt: 0.30, code: A13 }    # healthy
+      - { lt: 0.50, code: A12 }    # moderate burden
+      - { lt: 999,  code: A11 }    # heavy / no checking acct
+
+# ── Derived (calculated) fields ─────────────────────────────────────────
+derived:
+  emi_to_income_ratio: "existing_emi_inr / monthly_income_inr"
+
+# ── Defaults for fields not present in the bank's schema ────────────────
+# Each Indian bank has slightly different fields; defaults fill gaps.
+defaults:
+  credit_history:         A32     # existing credits paid back (neutral)
+  personal_status:        A93     # male single (overridden by gender below)
+  other_parties:          A101    # no co-applicant / guarantor
+  property_magnitude:     A121    # real estate (refined by housing)
+  other_payment_plans:    A143    # none
+  job:                    A173    # skilled employee/official
+  own_telephone:          A192    # yes
+  foreign_worker:         A202    # no (Indian customer is domestic)
+  installment_commitment: 4       # installment rate as % of disposable income
+
+# ── Gender → personal_status (German codes A91-A94) ─────────────────────
+gender_rules:
+  M: A93     # male single (heuristic — no marital_status in our schema)
+  F: A92     # female divorced/separated/married (German code conflates)
+
+# ── Output configuration ────────────────────────────────────────────────
+decision_thresholds:
+  approve_below:  0.25    # probability_default < 0.25 → APPROVE
+  reject_above:   0.50    # probability_default > 0.50 → REJECT
+                          # between → REVIEW (manual underwriter)
+
+audit_fields:
+  - model_version
+  - model_run_id
+  - scored_at
+  - schema_map_version
+
+schema_map_version: "1.0.0"

@@ -2,6 +2,19 @@
 
 All notable shipped work on this platform. Newest first.
 
+## v0.2.5 — Batch decisioning + Streamlit demo UI
+
+**Released 2026-06-04.**
+
+- Batch loan-decisioning pipeline: Indian-bank CSV → Excel with audit columns
+- Streamlit demo UI at port 8501, fronts the same `models:/credit-risk-classifier/Staging`
+- YAML-driven schema mapping (Indian-bank fields → model training schema)
+- 3-band decisions: APPROVE / REVIEW / REJECT with reason codes per REJECT
+- 2,000-row synthetic Indian customer dataset (Faker `en_IN`, PAN format, INR amounts)
+- Feature-importance-based reason codes (proxy for SHAP, ~100x faster)
+- Audit columns per decision: `model_version`, `schema_map_version`, `scored_at`
+- New `make p2-demo-data` / `p2-batch` / `p2-streamlit` shortcuts
+
 ## v0.2.0 — Serving + Docker image (Project 1)
 
 **Released 2026-06-04.**
