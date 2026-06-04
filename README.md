@@ -1,28 +1,63 @@
-# mlops-journey
+# MLOps Platform Engineering
+
+Production ML infrastructure + agentic AI systems. Built local-first on free OSS tooling — every component is `docker pull`able and reproducible from a fresh laptop.
 
 [![CI](https://github.com/himanshunigam-456/Mlops-journey/actions/workflows/ci.yml/badge.svg)](https://github.com/himanshunigam-456/Mlops-journey/actions/workflows/ci.yml)
+[![Docker Image](https://img.shields.io/badge/ghcr.io-credit--risk--api-blue?logo=docker)](https://github.com/himanshunigam-456/Mlops-journey/pkgs/container/credit-risk-api)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A 6-month, project-driven push from DevOps engineering into Senior **MLOps
-Platform Engineering with Agentic AI** specialization. Five portfolio projects
-spanning fintech, DevOps tooling, healthcare, platform engineering, and
-e-commerce — all built local-first on free/OSS tooling.
+---
 
-## Why this repo exists
+## Try it in 30 seconds
 
-Most ML engineers know how to train models. Few can productionize them. This
-journey closes that gap from the *opposite* direction: I'm DevOps
-engineer learning to ship ML, not an ML engineer learning Docker. Every
-project leans on the production-engineering moat (K8s, observability, IaC).
+```bash
+docker run --rm -p 8000:8000 ghcr.io/himanshunigam-456/credit-risk-api:latest
+# → http://localhost:8000/docs  (interactive API)
+```
 
-## Architecture (local-first dev environment)
+That image is the credit-risk classifier described below — built, tested, and continuously published from this repo.
+
+---
+
+## Featured · `credit-risk-api`
+
+Fintech default-prediction service. XGBoost on the UCI German Credit dataset, served behind FastAPI, packaged as a slim multi-stage Docker image, auto-published to GHCR on every push to `main`.
+
+| | |
+|---|---|
+| **Image** | [`ghcr.io/himanshunigam-456/credit-risk-api:latest`](https://github.com/himanshunigam-456/Mlops-journey/pkgs/container/credit-risk-api) · 1.71 GB · non-root · healthcheck |
+| **API surface** | `POST /predict` (Pydantic-validated) · `GET /healthz` · `GET /readyz` |
+| **Model lifecycle** | DVC-tracked dataset → XGBoost training sweep → MLflow Registry @ `Staging` → lifespan-loaded into FastAPI |
+| **Measured SLA** | p50 **14 ms** · p95 **25 ms** · p99 **35 ms** · 30 RPS sustained · 0 failures across 873 requests |
+| **Tests** | 33 / 33 — unit + integration + live-smoke |
+| **CI** | GitHub Actions: lint (ruff) + tests + multi-stage Docker build + push to GHCR with layer cache |
+
+### Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Host["Your laptop · Ubuntu 22.04 · GTX 1650"]
-        subgraph DC["Docker Compose · 'managed services'"]
+    Client[Client] -->|POST /predict| API[FastAPI · credit-risk-api]
+    API -->|load@startup| Registry[MLflow Model Registry<br/>credit-risk-classifier @ Staging]
+    Registry -->|pkl| Artifact[(MinIO · S3-compatible)]
+    API -->|inference| Response[prediction +<br/>probability + model_version]
+
+    GH[Push to main] -->|GitHub Actions| Build[Multi-stage build]
+    Build -->|tag latest, sha, branch| GHCR[ghcr.io · public image]
+    GHCR -.->|docker pull| Anywhere[Anywhere on the internet]
+```
+
+The pattern mirrors production: managed-service infra (MLflow, MinIO, Postgres) runs as docker-compose; workloads run as containers. The trained model artifact lives in object storage and is referenced by Registry alias — version bumps don't require code changes.
+
+---
+
+## Local stack
+
+```mermaid
+flowchart LR
+    subgraph Host["Local laptop · Ubuntu 22.04 · GTX 1650"]
+        subgraph DC["Docker Compose · managed-service tier"]
             MLF[MLflow :5000]
             PG[(Postgres :5432)]
             MIN[MinIO :9000]
@@ -31,101 +66,91 @@ flowchart LR
             MLF -->|artifacts| MIN
         end
 
-        subgraph K3D["k3d-mlops · K8s workloads"]
+        subgraph K3D["k3d-mlops · workload tier (K8s)"]
             CP[control-plane]
             W1[worker-0]
             W2[worker-1]
         end
 
-        subgraph OLL["Ollama · GPU LLM inference"]
+        subgraph OLL["Ollama · GPU LLM tier"]
             L8[llama3.1:8b]
             NE[nomic-embed-text]
         end
 
-        K3D -.->|model serving| MLF
-        K3D -.->|features| RDS
+        K3D -.->|serving| MLF
         OLL -.->|agent reasoning| K3D
     end
-
-    Code[Your Python code] -->|mlflow.log_*| MLF
-    Code -->|kubectl apply| K3D
-    Code -->|ollama API| OLL
 ```
 
-**The pattern mirrors production:** managed-services-style infra runs as
-docker-compose (mimics RDS / S3 / ElastiCache); workloads run on Kubernetes
-(mimics EKS / GKE). Project 4 will *also* deploy the platform itself on K8s
-via Helm — the "build your own SageMaker" pattern.
-
-## Projects
-
-| # | Project | Domain | Status |
-|---|---------|--------|--------|
-| 0 | Warmup — sklearn baseline + MLflow vertical slice | — | ✅ Complete |
-| 1 | Self-Healing Credit-Risk Pipeline | Fintech | ✅ Phase 2 |
-| 2 | Agentic SRE Co-Pilot (Autonomous Incident Investigator) | DevOps Tooling | 📋 Planned |
-| 3 | Medical-Literature RAG with Continuous Evaluation | Healthcare | 📋 Planned |
-| 4 | Mini ML Platform on Kubernetes ★ | Platform Engineering | 📋 Planned |
-| 5 | Autonomous Pricing & Inventory Agent (Capstone) | E-commerce | 📋 Planned |
-
-★ = portfolio crown jewel.
-
-## Stack (local-first, free)
-
-K3d · Docker Compose · MLflow · MinIO · PostgreSQL · Redis · Ollama (CUDA) ·
-LangGraph · Phoenix · Qdrant · Prometheus + Grafana · Terraform · ArgoCD · KServe.
-
-Full "Paid Tool → Free Alternative" mapping in
-[`docs/superpowers/specs/`](docs/superpowers/specs/).
-
-## Quick start
-
-```bash
-# 1. Copy secrets template (one-time)
-cp infra/.env.example infra/.env
-# (edit infra/.env with values of your choice)
-
-# 2. Smoke-test all infrastructure
-make verify          # expect 18/18 ✅
-
-# 3. Start the local MLOps stack
-make up
-
-# 4. Browse services
-#    MLflow UI: http://localhost:5000
-#    MinIO UI:  http://localhost:9001
-```
-
-## Repository layout
-
-```
-mlops-journey/
-├── .github/workflows/ci.yml            ← lint + tests on every push
-├── infra/                              ← local infrastructure
-│   ├── docker-compose.yml              ← MLflow + MinIO + Postgres + Redis
-│   ├── .env.example                    ← template; copy to .env (gitignored)
-│   ├── k3d-create.sh                   ← K8s cluster bootstrap
-│   ├── mlflow-entrypoint.sh            ← runtime deps installer
-│   ├── hello-world.yaml                ← cluster smoke test
-│   └── verify.sh                       ← end-to-end infra check
-├── docs/superpowers/specs/             ← design docs + plans
-├── project-0-warmup/                   ← Week 1 sklearn refresher
-├── project-1-credit-risk-pipeline/     ← Fintech (planned)
-├── project-2-sre-copilot/              ← DevOps Tooling (planned)
-├── project-3-medical-rag/              ← Healthcare (planned)
-├── project-4-ml-platform-k8s/          ← Platform Engineering ★ (planned)
-├── project-5-pricing-agent/            ← E-commerce capstone (planned)
-└── STATUS.md                           ← current week / blockers
-```
-
-## License
-
-MIT — see [LICENSE](LICENSE).
-
-## Author
-
-**Himanshu Nigam** —  building production MLOps & agentic AI systems.
+`docker-compose` mimics the cloud-managed tier (RDS / S3 / ElastiCache); `k3d` mimics EKS/GKE. The platform itself will run on K8s via Helm in the roadmap below.
 
 ---
 
-*Currently executing Week 3 of 26 — Project 1 Phase 2 complete (image live at [`ghcr.io/himanshunigam-456/credit-risk-api`](https://github.com/himanshunigam-456/Mlops-journey/pkgs/container/credit-risk-api)). See [`STATUS.md`](STATUS.md) for live progress.*
+## Quick start (run everything locally)
+
+```bash
+# 1. Secrets template (one-time)
+cp infra/.env.example infra/.env
+
+# 2. Bring up the managed-service tier (MLflow + MinIO + Postgres + Redis)
+make up
+
+# 3. Verify (18 health probes)
+make verify
+
+# 4. Pull the credit-risk model, train, register
+make p1-train && make p1-register
+
+# 5. Serve it via Docker
+make p2-docker-build && make p2-docker-run
+
+# 6. Hit the API
+curl http://localhost:8000/healthz
+open http://localhost:8000/docs
+```
+
+---
+
+## Roadmap
+
+| Project | Domain | Focus |
+|---|---|---|
+| ✅ **credit-risk-api** | Fintech | Tabular ML · serving · Docker · GHCR · load test |
+| 🟡 sre-copilot | DevOps tooling | Agentic AI · LangGraph · tool-using assistant for incident response |
+| 🟡 medical-rag | Healthcare | RAG with citations · continuous evaluation · drift detection |
+| 🟡 ml-platform-on-k8s ★ | Platform engineering | Mini-SageMaker · model serving on K8s · Helm · KServe |
+| 🟡 pricing-agent | E-commerce | Multi-step agentic system · natural-language ordering · React/Chainlit UI |
+
+★ = portfolio centerpiece.
+
+The next milestone for `credit-risk-api` is **drift detection + auto-retraining** with Evidently AI, then **canary deployment + Prometheus** monitoring, then **AWS EC2 production demo** with a Streamlit UI.
+
+---
+
+## Stack
+
+**ML / data:** XGBoost · scikit-learn · pandas · DVC · MLflow
+**Serving:** FastAPI · Pydantic · uvicorn · Docker · GHCR
+**Infra:** Docker Compose · k3d (Kubernetes) · MinIO · PostgreSQL · Redis
+**LLM:** Ollama · LangGraph (roadmap) · Phoenix (roadmap)
+**Observability:** Locust · Portainer · Prometheus + Grafana (roadmap)
+**CI:** GitHub Actions · ruff · pytest · pre-commit · gitleaks
+
+All free / OSS. No paid tools required to reproduce.
+
+---
+
+## See also
+
+- [`CHANGELOG.md`](CHANGELOG.md) — versioned shipped work
+- [`project-1-credit-risk-pipeline/README.md`](project-1-credit-risk-pipeline/README.md) — deep-dive on the featured project
+- [`docs/superpowers/`](docs/superpowers/) — design specs and implementation plans
+
+---
+
+## Author
+
+**Himanshu Nigam** · DevOps & MLOps Platform Engineering
+[LinkedIn](https://www.linkedin.com/in/himanshu-nigam) · **Open to MLOps consulting + senior platform engineering roles**
+
+License: [MIT](LICENSE)
