@@ -56,6 +56,41 @@ p1-register:  ## Promote the best run to Model Registry @ Staging
 p1-test:  ## Run all project-1 tests
 	.venv/bin/pytest project-1-credit-risk-pipeline -v
 
+# ── Project 1 Phase 2 — Serving ──
+
+p2-serve:  ## Run the FastAPI app locally on :8000 against live MLflow
+	cd project-1-credit-risk-pipeline && \
+	  ../.venv/bin/uvicorn credit_risk.serving.app:app --host 0.0.0.0 --port 8000 --reload
+
+p2-docker-build:  ## Build the credit-risk-api Docker image
+	cd project-1-credit-risk-pipeline && \
+	  docker build -f serving/Dockerfile -t credit-risk-api:dev .
+
+p2-docker-run:  ## Run the container against the compose stack
+	docker run --rm -d --name credit-risk-api \
+	  --network infra_default \
+	  -p 8000:8000 \
+	  -e MLFLOW_TRACKING_URI=http://mlflow:5000 \
+	  -e AWS_ACCESS_KEY_ID=$$(grep '^MINIO_ROOT_USER=' infra/.env | cut -d= -f2) \
+	  -e AWS_SECRET_ACCESS_KEY=$$(grep '^MINIO_ROOT_PASSWORD=' infra/.env | cut -d= -f2) \
+	  -e MLFLOW_S3_ENDPOINT_URL=http://minio:9000 \
+	  credit-risk-api:dev
+	@echo "Container started — http://localhost:8000/docs"
+
+p2-docker-stop:  ## Stop the credit-risk-api container
+	-docker stop credit-risk-api
+
+p2-load-test:  ## Run a 30s Locust load test against http://localhost:8000
+	cd project-1-credit-risk-pipeline && \
+	  ../.venv/bin/locust -f serving/locustfile.py --headless \
+	    --users 10 --spawn-rate 2 --run-time 30s \
+	    --host http://localhost:8000
+
+p2-test:  ## Run only the Phase 2 (serving) tests
+	.venv/bin/pytest project-1-credit-risk-pipeline/tests/test_serving_schemas.py \
+	                 project-1-credit-risk-pipeline/tests/test_serving_app.py \
+	                 project-1-credit-risk-pipeline/tests/test_serving_smoke.py -v
+
 clean:  ## Stop stack AND remove data volumes (DESTRUCTIVE)
 	cd infra && docker compose down -v
 	# Bind-mounted data dirs are root-owned (created by containerized
