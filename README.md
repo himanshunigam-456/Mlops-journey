@@ -62,7 +62,7 @@ via Helm — the "build your own SageMaker" pattern.
 | # | Project | Domain | Status |
 |---|---------|--------|--------|
 | 0 | Warmup — sklearn baseline + MLflow vertical slice | — | ✅ Complete |
-| 1 | Self-Healing Credit-Risk Pipeline | Fintech | ✅ Phase 1 |
+| 1 | Self-Healing Credit-Risk Pipeline | Fintech | ✅ Phase 2 |
 | 2 | Agentic SRE Co-Pilot (Autonomous Incident Investigator) | DevOps Tooling | 📋 Planned |
 | 3 | Medical-Literature RAG with Continuous Evaluation | Healthcare | 📋 Planned |
 | 4 | Mini ML Platform on Kubernetes ★ | Platform Engineering | 📋 Planned |
@@ -128,4 +128,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-*Currently executing Week 2 of 26 — Project 1 Phase 1 complete. See [`STATUS.md`](STATUS.md) for live progress.*
+*Currently executing Week 3 of 26 — Project 1 Phase 2 complete (image live at [`ghcr.io/himanshunigam-456/credit-risk-api`](https://github.com/himanshunigam-456/Mlops-journey/pkgs/container/credit-risk-api)). See [`STATUS.md`](STATUS.md) for live progress.*
