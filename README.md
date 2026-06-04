@@ -39,7 +39,7 @@ Fintech default-prediction service. XGBoost on the UCI German Credit dataset, se
 ```mermaid
 flowchart LR
     Client[Client] -->|POST /predict| API[FastAPI · credit-risk-api]
-    API -->|load@startup| Registry[MLflow Model Registry<br/>credit-risk-classifier @ Staging]
+    API -->|load at startup| Registry[MLflow Model Registry<br/>credit-risk-classifier at Staging]
     Registry -->|pkl| Artifact[(MinIO · S3-compatible)]
     API -->|inference| Response[prediction +<br/>probability + model_version]
 
