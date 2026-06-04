@@ -13,7 +13,7 @@ e-commerce — all built local-first on free/OSS tooling.
 ## Why this repo exists
 
 Most ML engineers know how to train models. Few can productionize them. This
-journey closes that gap from the *opposite* direction: I'm a 7-yr DevOps
+journey closes that gap from the *opposite* direction: I'm DevOps
 engineer learning to ship ML, not an ML engineer learning Docker. Every
 project leans on the production-engineering moat (K8s, observability, IaC).
 
@@ -124,7 +124,7 @@ MIT — see [LICENSE](LICENSE).
 
 ## Author
 
-**Himanshu Nigam** — 7-yr DevOps engineer building production MLOps & agentic AI systems.
+**Himanshu Nigam** —  building production MLOps & agentic AI systems.
 
 ---
 
