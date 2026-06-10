@@ -102,6 +102,26 @@ p2-batch:  ## Run batch scoring on the sample CSV → loan_decisions.xlsx
 p2-streamlit:  ## Launch the BlueLeaf Bank demo UI on http://localhost:8501
 	.venv/bin/streamlit run project-1-credit-risk-pipeline/serving/streamlit_app.py
 
+# ── Project 1 — Drift monitoring ──
+
+p3-reference:  ## Snapshot the training-time feature distribution (one per model version)
+	.venv/bin/python project-1-credit-risk-pipeline/scripts/build_reference.py
+
+p3-drift-data:  ## Generate the SHIFTED synthetic dataset for the drift demo
+	.venv/bin/python project-1-credit-risk-pipeline/scripts/generate_drifted_customers.py
+
+p3-check:  ## Run drift check — reference vs last 7 days of captures, exit 1 on breach
+	.venv/bin/python project-1-credit-risk-pipeline/scripts/drift_check.py
+
+p3-simulate:  ## Score the drifted dataset through the live API — populates capture buffer
+	.venv/bin/python project-1-credit-risk-pipeline/scripts/batch_predict.py \
+	  --input project-1-credit-risk-pipeline/examples/sample_indian_customers_drifted.csv \
+	  --output project-1-credit-risk-pipeline/examples/drifted_decisions.xlsx
+
+p3-test:  ## Run only the drift-detection tests
+	.venv/bin/pytest project-1-credit-risk-pipeline/tests/test_drift_capture.py \
+	                 project-1-credit-risk-pipeline/tests/test_drift_reporter.py -v
+
 clean:  ## Stop stack AND remove data volumes (DESTRUCTIVE)
 	cd infra && docker compose down -v
 	# Bind-mounted data dirs are root-owned (created by containerized
