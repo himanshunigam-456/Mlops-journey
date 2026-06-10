@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import yaml
 
 # Allow running from anywhere — make the project's scripts importable
@@ -24,6 +25,7 @@ HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "scripts"))
 
 from batch_predict import score_dataframe  # noqa: E402
+from credit_risk.drift.store import read_report_html  # noqa: E402
 
 EXAMPLES = HERE / "examples"
 SAMPLE_CSV = EXAMPLES / "sample_indian_customers.csv"
@@ -91,90 +93,113 @@ st.markdown(
     "Same model serves the [real-time API](http://localhost:8000/docs) and this batch UI."
 )
 
-col_upload, col_sample = st.columns([3, 1])
-with col_upload:
-    uploaded = st.file_uploader(
-        "Customer applications (CSV)",
-        type=["csv"],
-        help=(
-            "Columns: customer_id, full_name, pan, age, ... "
-            "See `examples/sample_indian_customers.csv`"
-        ),
-    )
-with col_sample:
-    st.markdown("&nbsp;")
-    use_sample = st.button("Use sample data (2,000 rows)", use_container_width=True)
+tab_decisions, tab_drift = st.tabs(["📋 Decisions", "📊 Drift monitoring"])
 
 
-# Pick input source
-df_input: pd.DataFrame | None = None
-input_label: str = ""
+# ── Tab 1 · Decisions ──────────────────────────────────────────────────
+with tab_decisions:
+    col_upload, col_sample = st.columns([3, 1])
+    with col_upload:
+        uploaded = st.file_uploader(
+            "Customer applications (CSV)",
+            type=["csv"],
+            help=(
+                "Columns: customer_id, full_name, pan, age, ... "
+                "See `examples/sample_indian_customers.csv`"
+            ),
+        )
+    with col_sample:
+        st.markdown("&nbsp;")
+        use_sample = st.button("Use sample data (2,000 rows)", use_container_width=True)
 
-if uploaded is not None:
-    df_input = pd.read_csv(uploaded)
-    input_label = uploaded.name
-elif use_sample:
-    df_input = load_sample_csv()
-    input_label = SAMPLE_CSV.name
+    # Pick input source
+    df_input: pd.DataFrame | None = None
+    input_label: str = ""
+
+    if uploaded is not None:
+        df_input = pd.read_csv(uploaded)
+        input_label = uploaded.name
+    elif use_sample:
+        df_input = load_sample_csv()
+        input_label = SAMPLE_CSV.name
+
+    if df_input is not None:
+        with st.spinner(
+            f"Scoring {len(df_input):,} customers against credit-risk-classifier @ Staging..."
+        ):
+            schema = load_schema()
+            decisions = score_dataframe(df_input, schema)
+
+        st.success(f"Scored {len(decisions):,} customers from `{input_label}`")
+
+        # Summary metrics (the recruiter eye-candy)
+        counts = decisions["decision"].value_counts()
+        pct = decisions["decision"].value_counts(normalize=True) * 100
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total", f"{len(decisions):,}")
+        m2.metric(
+            "APPROVE 🟢", f"{int(counts.get('APPROVE', 0)):,}", f"{pct.get('APPROVE', 0):.1f}%"
+        )
+        m3.metric("REVIEW 🟡", f"{int(counts.get('REVIEW', 0)):,}", f"{pct.get('REVIEW', 0):.1f}%")
+        m4.metric("REJECT 🔴", f"{int(counts.get('REJECT', 0)):,}", f"{pct.get('REJECT', 0):.1f}%")
+
+        # Audit columns (lineage badge)
+        st.caption(
+            f"Model: `credit-risk-classifier v{decisions['model_version'].iloc[0]}` · "
+            f"Schema map: `{decisions['schema_map_version'].iloc[0]}` · "
+            f"Scored at: `{decisions['scored_at'].iloc[0]}`"
+        )
+
+        # Decision table — color-coded by band
+        def _color_decision(val: str) -> str:
+            return {
+                "APPROVE": "background-color: #d4edda; color: #155724",
+                "REVIEW": "background-color: #fff3cd; color: #856404",
+                "REJECT": "background-color: #f8d7da; color: #721c24",
+            }.get(val, "")
+
+        st.subheader("Decisions")
+        styled = decisions.style.map(_color_decision, subset=["decision"]).format(
+            {"probability_default": "{:.3f}", "loan_amount_inr": "₹{:,.0f}"}
+        )
+        st.dataframe(styled, use_container_width=True, height=480)
+
+        # Download as Excel
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+            decisions.to_excel(writer, index=False, sheet_name="Decisions")
+        buf.seek(0)
+        st.download_button(
+            label="⬇  Download Excel (loan_decisions.xlsx)",
+            data=buf,
+            file_name="loan_decisions.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="primary",
+        )
+
+    else:
+        st.info(
+            "👆 Upload a CSV above, or click **Use sample data** "
+            "to score the bundled 2,000-row synthetic dataset."
+        )
+        st.markdown("### Sample of the input format")
+        st.dataframe(load_sample_csv().head(5), use_container_width=True)
 
 
-# ── Run + render ───────────────────────────────────────────────────────
-if df_input is not None:
-    with st.spinner(
-        f"Scoring {len(df_input):,} customers against credit-risk-classifier @ Staging..."
-    ):
-        schema = load_schema()
-        decisions = score_dataframe(df_input, schema)
-
-    st.success(f"Scored {len(decisions):,} customers from `{input_label}`")
-
-    # Summary metrics (the recruiter eye-candy)
-    counts = decisions["decision"].value_counts()
-    pct = decisions["decision"].value_counts(normalize=True) * 100
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total", f"{len(decisions):,}")
-    m2.metric("APPROVE 🟢", f"{int(counts.get('APPROVE', 0)):,}", f"{pct.get('APPROVE', 0):.1f}%")
-    m3.metric("REVIEW 🟡", f"{int(counts.get('REVIEW', 0)):,}", f"{pct.get('REVIEW', 0):.1f}%")
-    m4.metric("REJECT 🔴", f"{int(counts.get('REJECT', 0)):,}", f"{pct.get('REJECT', 0):.1f}%")
-
-    # Audit columns (lineage badge)
+# ── Tab 2 · Drift monitoring ───────────────────────────────────────────
+with tab_drift:
+    st.subheader("Feature & target drift")
     st.caption(
-        f"Model: `credit-risk-classifier v{decisions['model_version'].iloc[0]}` · "
-        f"Schema map: `{decisions['schema_map_version'].iloc[0]}` · "
-        f"Scored at: `{decisions['scored_at'].iloc[0]}`"
+        "Reference: training-time feature distribution · "
+        "Current: last 7 days of production scoring · "
+        "Method: Kolmogorov-Smirnov per column"
     )
-
-    # Decision table — color-coded by band
-    def _color_decision(val: str) -> str:
-        return {
-            "APPROVE": "background-color: #d4edda; color: #155724",
-            "REVIEW": "background-color: #fff3cd; color: #856404",
-            "REJECT": "background-color: #f8d7da; color: #721c24",
-        }.get(val, "")
-
-    st.subheader("Decisions")
-    styled = decisions.style.map(_color_decision, subset=["decision"]).format(
-        {"probability_default": "{:.3f}", "loan_amount_inr": "₹{:,.0f}"}
-    )
-    st.dataframe(styled, use_container_width=True, height=480)
-
-    # Download as Excel
-    buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        decisions.to_excel(writer, index=False, sheet_name="Decisions")
-    buf.seek(0)
-    st.download_button(
-        label="⬇  Download Excel (loan_decisions.xlsx)",
-        data=buf,
-        file_name="loan_decisions.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        type="primary",
-    )
-
-else:
-    st.info(
-        "👆 Upload a CSV above, or click **Use sample data** "
-        "to score the bundled 2,000-row synthetic dataset."
-    )
-    st.markdown("### Sample of the input format")
-    st.dataframe(load_sample_csv().head(5), use_container_width=True)
+    try:
+        html = read_report_html("latest.html")
+        components.html(html, height=900, scrolling=True)
+    except Exception:
+        st.info(
+            "No drift report available yet. Run `make p3-check` to generate one. "
+            "It compares the last 7 days of production traffic against the "
+            "training reference and uploads the report to MinIO."
+        )
